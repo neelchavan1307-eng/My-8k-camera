@@ -6,21 +6,16 @@ workflows:
     environment:
       flutter: 3.22.3
       java: 17
-      groups:
-        - google_play
     scripts:
-      - name: Fix project
+            - name: Fix project
         script: |
           flutter clean
           rm -rf android
           flutter create . --platforms=android --org com.example.my8kcamera
-          # Fix NDK and Gradle issues
-          echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableR8=true" >> android/gradle.properties
           flutter pub get
           flutter pub upgrade
-      - name: Build APK
+            - name: Build APK
         script: |
-          flutter build apk --release --no-tree-shake-icons --verbose
+          flutter build apk --release --no-tree-shake-icons
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+            - build/app/outputs/flutter-apk/*.apk
