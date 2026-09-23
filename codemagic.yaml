@@ -6,84 +6,19 @@ workflows:
     environment:
       java: 17
     scripts:
-      - name: Create Android Project
+      - name: Create project
         script: |
-          # Root gradle
-          cat > build.gradle <<'GR'
-          buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.2.2' }
-          }
-          allprojects { repositories { google(); mavenCentral() } }
-          task clean(type: Delete) { delete rootProject.buildDir }
-          GR
-
           echo "include ':app'" > settings.gradle
-
-          mkdir -p app/src/main/java/com/neel/my8kcamera
-          mkdir -p app/src/main/res/layout
-          mkdir -p app/src/main/res/values
-
-          cat > app/build.gradle <<'GR'
-          plugins { id 'com.android.application' }
-          android {
-              namespace 'com.neel.my8kcamera'
-              compileSdk 34
-              defaultConfig { applicationId "com.neel.my8kcamera"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0" }
-              buildTypes { release { minifyEnabled false } }
-              compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'androidx.camera:camera-camera2:1.3.4'
-              implementation 'androidx.camera:camera-lifecycle:1.3.4'
-              implementation 'androidx.camera:camera-view:1.3.4'
-          }
-          GR
-
-          cat > app/src/main/AndroidManifest.xml <<'GR'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.CAMERA" />
-              <uses-permission android:name="android.permission.RECORD_AUDIO" />
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-              <application android:allowBackup="true" android:label="My 8K Camera" android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          GR
-
+          printf "buildscript{repositories{google();mavenCentral()} dependencies{classpath 'com.android.tools.build:gradle:8.2.2'}} allprojects{repositories{google();mavenCentral()}}" > build.gradle
+          mkdir -p app/src/main/java/com/neel/my8kcamera app/src/main/res/layout app/src/main/res/values
+          printf "plugins{id 'com.android.application'}\nandroid{namespace 'com.neel.my8kcamera'; compileSdk 34; defaultConfig{applicationId 'com.neel.my8kcamera'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0'} buildTypes{release{minifyEnabled false}} compileOptions{sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8}}\ndependencies{implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'androidx.camera:camera-camera2:1.3.4'; implementation 'androidx.camera:camera-lifecycle:1.3.4'; implementation 'androidx.camera:camera-view:1.3.4'}" > app/build.gradle
+          printf "<manifest xmlns:android='http://schemas.android.com/apk/res/android'><uses-permission android:name='android.permission.CAMERA'/><uses-permission android:name='android.permission.RECORD_AUDIO'/><application android:label='My 8K Camera' android:theme='@android:style/Theme.NoTitleBar.Fullscreen'><activity android:name='.MainActivity' android:exported='true'><intent-filter><action android:name='android.intent.action.MAIN'/><category android:name='android.intent.category.LAUNCHER'/></intent-filter></activity></application></manifest>" > app/src/main/AndroidManifest.xml
           echo '<resources><string name="app_name">My 8K Camera</string></resources>' > app/src/main/res/values/strings.xml
-
-          cat > app/src/main/res/layout/activity_main.xml <<'GR'
-          <?xml version="1.0" encoding="utf-8"?>
-          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-              <androidx.camera.view.PreviewView android:id="@+id/previewView" android:layout_width="match_parent" android:layout_height="match_parent"/>
-              <Button android:id="@+id/btnRecord" android:layout_width="80dp" android:layout_height="80dp" android:text="REC" android:layout_gravity="bottom|center" android:layout_marginBottom="30dp"/>
-          </FrameLayout>
-          GR
-
-          cat > app/src/main/java/com/neel/my8kcamera/MainActivity.java <<'GR'
-          package com.neel.my8kcamera;
-          import android.Manifest; import android.content.pm.PackageManager; import android.os.Bundle; import android.widget.Button; import android.widget.Toast;
-          import androidx.annotation.NonNull; import androidx.appcompat.app.AppCompatActivity; import androidx.camera.core.CameraSelector; import androidx.camera.core.Preview; import androidx.camera.lifecycle.ProcessCameraProvider; import androidx.camera.video.*; import androidx.camera.view.PreviewView; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat;
-          import com.google.common.util.concurrent.ListenableFuture;
-          public class MainActivity extends AppCompatActivity {
-              PreviewView previewView; Button btnRecord; VideoCapture<Recorder> videoCapture; boolean isRec=false;
-              protected void onCreate(Bundle b){ super.onCreate(b); setContentView(R.layout.activity_main); previewView=findViewById(R.id.previewView); btnRecord=findViewById(R.id.btnRecord);
-                  if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED) ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, 10); else startCam();
-                  btnRecord.setOnClickListener(v->{ Toast.makeText(this, isRec?"Stopped":"8K REC Started - HIGHEST Quality", Toast.LENGTH_SHORT).show(); isRec=!isRec; });
-              }
-              void startCam(){ ListenableFuture<ProcessCameraProvider> f=ProcessCameraProvider.getInstance(this); f.addListener(()->{ try{ ProcessCameraProvider p=f.get(); Preview pr=new Preview.Builder().build(); pr.setSurfaceProvider(previewView.getSurfaceProvider()); Recorder rec=new Recorder.Builder().setQualitySelector(QualitySelector.from(Quality.HIGHEST)).build(); videoCapture=VideoCapture.withOutput(rec); p.unbindAll(); p.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, pr, videoCapture);}catch(Exception e){}}, ContextCompat.getMainExecutor(this));}
-              public void onRequestPermissionsResult(int c, @NonNull String[] p, @NonNull int[] r){ super.onRequestPermissionsResult(c,p,r); if(r.length>0 && r[0]==PackageManager.PERMISSION_GRANTED) startCam(); }
-          }
-          GR
-
+          printf "<?xml version='1.0' encoding='utf-8'?><FrameLayout xmlns:android='http://schemas.android.com/apk/res/android' android:layout_width='match_parent' android:layout_height='match_parent'><androidx.camera.view.PreviewView android:id='@+id/previewView' android:layout_width='match_parent' android:layout_height='match_parent'/><Button android:id='@+id/btnRecord' android:layout_width='80dp' android:layout_height='80dp' android:text='REC' android:layout_gravity='bottom|center'/></FrameLayout>" > app/src/main/res/layout/activity_main.xml
+          printf "package com.neel.my8kcamera; import android.Manifest; import android.os.Bundle; import androidx.appcompat.app.AppCompatActivity; import androidx.camera.core.*; import androidx.camera.lifecycle.ProcessCameraProvider; import androidx.camera.view.PreviewView; import androidx.core.app.ActivityCompat; import androidx.core.content.ContextCompat; import com.google.common.util.concurrent.ListenableFuture; public class MainActivity extends AppCompatActivity{PreviewView pv; public void onCreate(Bundle b){super.onCreate(b); setContentView(R.layout.activity_main); pv=findViewById(R.id.previewView); ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO},10); ListenableFuture<ProcessCameraProvider> f=ProcessCameraProvider.getInstance(this); f.addListener(()->{try{ProcessCameraProvider p=f.get(); Preview pr=new Preview.Builder().build(); pr.setSurfaceProvider(pv.getSurfaceProvider()); p.unbindAll(); p.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, pr);}catch(Exception e){}}, ContextCompat.getMainExecutor(this));}}" > app/src/main/java/com/neel/my8kcamera/MainActivity.java
       - name: Build APK
         script: |
           gradle wrapper --gradle-version 8.5
-         ./gradlew assembleRelease
-
+          ./gradlew assembleRelease
     artifacts:
       - app/build/outputs/apk/release/*.apk
