@@ -4,17 +4,17 @@ workflows:
     max_build_duration: 20
     instance_type: mac_mini_m2
     environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
+      flutter: 3.24.5
+      java: 17
     scripts:
       - name: Fix project
         script: |
           flutter clean
-          flutter create . --platforms=android
+          rm -rf android
+          flutter create . --platforms=android --org com.example.my8kcamera
           flutter pub get
       - name: Build APK
         script: |
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
