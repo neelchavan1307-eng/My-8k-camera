@@ -1,4 +1,3 @@
-
 workflows:
   android-8k:
     name: Android Workflow
@@ -6,11 +5,18 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
-    working_directory: my_camera_app
     scripts:
+      - name: Check files
+        script: |
+          pwd
+          ls -la
+          ls -la my_camera_app
+          cat my_camera_app/pubspec.yaml
       - name: Get packages
+        working_directory: my_camera_app
         script: flutter pub get
       - name: Build APK
+        working_directory: my_camera_app
         script: flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - my_camera_app/build/app/outputs/flutter-apk/app-release.apk
