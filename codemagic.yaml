@@ -5,9 +5,9 @@ workflows:
     instance_type: mac_mini_m2
     environment:
           flutter: 3.22.3
-        scripts:
-              - name: Fix project
-            script: |
+          2scripts:
+                - name: Fix project
+            2      script: |
               flutter clean
               rm -rf android
               flutter create . --platforms=android --org com.example.my8kcamera
