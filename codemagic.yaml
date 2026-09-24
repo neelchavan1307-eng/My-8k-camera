@@ -1,1 +1,33 @@
-workflows: { android-workflow: { name: Android Workflow, max_build_duration: 60, instance_type: mac_mini_m2, environment: { flutter: 3.22.3 }, scripts: [{ name: Fix project, script: "flutter clean\nrm -rf android\nflutter create . --platforms=android --org com.example.my8kcamera\nflutter pub get" }, { name: Build APK, script: "flutter build apk --release --no-tree-shake-icons" }], artifacts: ["build/app/outputs/flutter-apk/*.apk"] } }
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: '8K Camera',
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        appBar: AppBar(title: const Text('My 8K Camera'), centerTitle: true),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.camera_alt, size: 100, color: Colors.white),
+              SizedBox(height: 20),
+              Text('8K Camera Ready!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10),
+              Text('APK Build Success', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
