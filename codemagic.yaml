@@ -5,17 +5,16 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       flutter: 3.22.3
-      java: 17
-    scripts:
-            - name: Fix project
-        script: |
-          flutter clean
-          rm -rf android
-          flutter create . --platforms=android --org com.example.my8kcamera
-          flutter pub get
-          flutter pub upgrade
-            - name: Build APK
-        script: |
-          flutter build apk --release --no-tree-shake-icons
+       java: 17
+        scripts:
+       - name: Fix project
+            script: |
+              flutter clean
+              rm -rf android
+              flutter create . --platforms=android --org com.example.my8kcamera
+              flutter pub get
+      - name: Build APK
+          script: |
+              flutter build apk --release --no-tree-shake-icons
     artifacts:
-            - build/app/outputs/flutter-apk/*.apk
+       - build/app/outputs/flutter-apk/*.apk
