@@ -2,137 +2,97 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'dart:io';
 
 late List<CameraDescription> cameras;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  runApp(MyApp());
+  runApp(MaterialApp(home: FinalCamera(), debugShowCheckedModeBanner: false));
 }
 
-class MyApp extends StatelessWidget {
+class FinalCamera extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(home: ProCameraScreen(), debugShowCheckedModeBanner: false);
-  }
+  _FinalCameraState createState() => _FinalCameraState();
 }
 
-class ProCameraScreen extends StatefulWidget {
-  @override
-  _ProCameraScreenState createState() => _ProCameraScreenState();
-}
-
-class _ProCameraScreenState extends State<ProCameraScreen> {
+class _FinalCameraState extends State<FinalCamera> {
   late CameraController controller;
   bool isReady = false;
+  bool isPhoto = true;
   bool isRecording = false;
-  bool isPhotoMode = true;
-  FlashMode flashMode = FlashMode.off;
-  String selectedFilter = "Original";
+  bool isProMode = false;
+  bool isMacro = false;
+  int camIndex = 0;
+  FlashMode flash = FlashMode.off;
   String quality = "4K";
-  bool isCinematic = false;
-  bool isPortrait = false;
-  bool aiEnhance = false;
-  String? lastImagePath;
+  String filter = "Original";
+  double zoom = 1.0;
+  double ev = 0.0;
 
-  List<String> filters = ["Original", "Vivid", "B&W", "Warm", "Cold", "Cinematic"];
-
-  Map<String, List<double>> filterMatrix = {
+  Map<String, List<double>> filters = {
     "Original": [1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0],
-    "Vivid": [1.2,0,0,0,0, 0,1.2,0,0,0, 0,0,1.2,0,0, 0,0,0,1,0],
+    "Vivid": [1.3,0,0,0,0, 0,1.3,0,0,0, 0,0,1.3,0,0, 0,0,0,1,0],
     "B&W": [0.2126,0.7152,0.0722,0,0, 0.2126,0.7152,0.0722,0,0, 0.2126,0.7152,0.0722,0,0, 0,0,0,1,0],
-    "Warm": [1.2,0,0,0,20, 0,1,0,0,0, 0,0,0.8,0,0, 0,0,0,1,0],
-    "Cold": [0.8,0,0,0,0, 0,1,0,0,0, 0,0,1.2,0,20, 0,0,0,1,0],
-    "Cinematic": [1.1,0,0,0,10, 0,1.1,0,0,5, 0,0,0.9,0,0, 0,0,0,1,0],
+    "Warm": [1.2,0,0,0,15, 0,1,0,0,0, 0,0,0.8,0,0, 0,0,0,1,0],
+    "Cinematic": [1.1,0,0,0,10, 0,1.05,0,0,5, 0,0,0.9,0,0, 0,0,0,1,0],
   };
 
   @override
-  void initState() { super.initState(); initCamera(); }
+  void initState(){ super.initState(); startCam(0); }
 
-  Future<void> initCamera({ResolutionPreset preset = ResolutionPreset.ultraHigh}) async {
-    await [Permission.camera, Permission.storage, Permission.microphone, Permission.photos].request();
-    var res = ResolutionPreset.ultraHigh;
-    if(quality=="720") res = ResolutionPreset.medium;
-    if(quality=="1080") res = ResolutionPreset.high;
-    if(quality=="4K") res = ResolutionPreset.ultraHigh;
-    controller = CameraController(cameras[0], res, enableAudio: true);
+  Future<void> startCam(int index) async {
+    await [Permission.camera, Permission.microphone, Permission.storage, Permission.photos].request();
+    var preset = quality=="720"?ResolutionPreset.medium: quality=="1080"?ResolutionPreset.high: ResolutionPreset.ultraHigh;
+    controller = CameraController(cameras[index], preset, enableAudio: true);
     await controller.initialize();
-    await controller.setFlashMode(flashMode);
-    setState(() => isReady = true);
-  }
-
-  Future<void> takePicture() async {
-    final image = await controller.takePicture();
-    await ImageGallerySaver.saveFile(image.path);
-    setState(() { lastImagePath = image.path; });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aiEnhance? 'AI Enhanced Photo Saved!' : 'Photo Saved!')));
-  }
-
-  Future<void> toggleRecording() async {
-    if(isRecording){
-      final file = await controller.stopVideoRecording();
-      await ImageGallerySaver.saveFile(file.path);
-      setState(() => isRecording=false);
-    } else {
-      await controller.startVideoRecording();
-      setState(() => isRecording=true);
-    }
+    await controller.setFlashMode(flash);
+    setState((){ isReady=true; camIndex=index; });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isReady) return Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.white)));
+    if(!isReady) return Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator()));
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          ColorFiltered(
-            colorFilter: ColorFilter.matrix(filterMatrix[selectedFilter]!),
-            child: Center(child: AspectRatio(aspectRatio: isCinematic? 21/9 : controller.value.aspectRatio, child: CameraPreview(controller))),
-          ),
-          if(isPortrait) Container(color: Colors.black.withOpacity(0.1), child: Center(child: Icon(Icons.blur_on, color: Colors.white24, size: 100))),
+      body: Stack(children: [
+        // FULL SCREEN FIX - 100% screen bharun disel
+        Positioned.fill(child: ColorFiltered(colorFilter: ColorFilter.matrix(filters[filter]!), child: CameraPreview(controller))),
 
-          // Top Bar
-          SafeArea(child: Padding(padding: EdgeInsets.all(15), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)), child: Row(children: [
-              GestureDetector(onTap: () async { setState(() { flashMode = flashMode==FlashMode.off?FlashMode.torch:FlashMode.off; }); await controller.setFlashMode(flashMode); }, child: Icon(flashMode==FlashMode.off?Icons.flash_off:Icons.flash_on, color: Colors.white)),
-              SizedBox(width: 10),
-              GestureDetector(onTap: () => setState(() => aiEnhance=!aiEnhance), child: Icon(Icons.auto_awesome, color: aiEnhance?Colors.yellow:Colors.white)),
-            ])),
-            Container(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)), child: DropdownButtonHideUnderline(child: DropdownButton<String>(value: quality, dropdownColor: Colors.black, style: TextStyle(color: Colors.white), items: ["720","1080","4K"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) async { setState(() { quality=v!; isReady=false; }); await initCamera(); }))),
-          ]))),
-
-          // Filter Bar
-          Positioned(top: 100, left: 0, right: 0, child: Container(height: 40, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: filters.length, itemBuilder: (c,i){ return GestureDetector(onTap: ()=>setState(()=>selectedFilter=filters[i]), child: Container(margin: EdgeInsets.symmetric(horizontal: 6), padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8), decoration: BoxDecoration(color: selectedFilter==filters[i]?Colors.white:Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text(filters[i], style: TextStyle(color: selectedFilter==filters[i]?Colors.black:Colors.white, fontWeight: FontWeight.bold)))); }))),
-
-          // Cinematic / Portrait Toggles
-          Positioned(top: 150, left: 15, child: Column(children: [
-            FilterChip(label: Text("CINEMATIC", style: TextStyle(color: Colors.white, fontSize: 10)), selected: isCinematic, onSelected: (v)=>setState(()=>isCinematic=v), backgroundColor: Colors.black54, selectedColor: Colors.red),
-            SizedBox(height: 8),
-            FilterChip(label: Text("PORTRAIT / BOKEH", style: TextStyle(color: Colors.white, fontSize: 10)), selected: isPortrait, onSelected: (v)=>setState(()=>isPortrait=v), backgroundColor: Colors.black54, selectedColor: Colors.blue),
+        SafeArea(child: Padding(padding: EdgeInsets.all(12), child: Column(children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              _btn(flash==FlashMode.off?Icons.flash_off:Icons.flash_on, () async { setState(()=> flash=flash==FlashMode.off?FlashMode.torch:FlashMode.off); await controller.setFlashMode(flash); }),
+              SizedBox(width:8), _btn(Icons.cameraswitch, () async { setState(()=>isReady=false); await startCam(camIndex==0?1:0); }),
+              SizedBox(width:8), _btn(Icons.macro_off, () async { if(cameras.length>2){ setState(()=>isReady=false); await startCam(isMacro?0:2); setState(()=>isMacro=!isMacro);} else { isMacro=!isMacro; controller.setZoomLevel(isMacro?2.5:1.0); setState((){});} }, active: isMacro),
+            ]),
+            Container(padding: EdgeInsets.symmetric(horizontal:8,vertical:2), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)), child: DropdownButtonHideUnderline(child: DropdownButton<String>(value: quality, dropdownColor: Colors.black, style: TextStyle(color: Colors.white, fontSize:12), items: ["720","1080","4K"].map((e)=>DropdownMenuItem(value:e, child:Text(e))).toList(), onChanged: (v) async { quality=v!; setState(()=>isReady=false); await startCam(camIndex); }))),
+          ]),
+          SizedBox(height:10),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: filters.keys.map((f)=> GestureDetector(onTap: ()=>setState(()=>filter=f), child: Container(margin: EdgeInsets.only(right:6), padding: EdgeInsets.symmetric(horizontal:12,vertical:6), decoration: BoxDecoration(color: filter==f?Colors.white:Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text(f, style: TextStyle(color: filter==f?Colors.black:Colors.white, fontSize:11, fontWeight: FontWeight.bold))))).toList())),
+          if(isProMode) SizedBox(height:12),
+          if(isProMode) Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)), child: Column(children: [
+            Row(children: [Text("ZOOM ${zoom.toStringAsFixed(1)}x", style: TextStyle(color:Colors.white, fontSize:10)), Expanded(child: Slider(value: zoom, min:1, max:8, onChanged: (v){ setState(()=>zoom=v); controller.setZoomLevel(v); }))]),
+            Row(children: [Text("EV ${ev.toStringAsFixed(1)}", style: TextStyle(color:Colors.white, fontSize:10)), Expanded(child: Slider(value: ev, min:-2, max:2, onChanged: (v){ setState(()=>ev=v); controller.setExposureOffset(v); }))]),
           ])),
+        ]))),
 
-          // Bottom Controls
-          Positioned(bottom: 0, left: 0, right: 0, child: Container(padding: EdgeInsets.only(bottom: 30, top: 15), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black87])), child: Column(children: [
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              GestureDetector(onTap: ()=>setState(()=>isPhotoMode=true), child: Text("PHOTO", style: TextStyle(color: isPhotoMode?Colors.white:Colors.white54, fontWeight: FontWeight.bold))),
-              SizedBox(width: 30),
-              GestureDetector(onTap: ()=>setState(()=>isPhotoMode=false), child: Text("VIDEO", style: TextStyle(color:!isPhotoMode?Colors.white:Colors.white54, fontWeight: FontWeight.bold))),
-            ]),
-            SizedBox(height: 20),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              Container(width: 60, height: 60, decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 2), borderRadius: BorderRadius.circular(10)), child: lastImagePath!=null?ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(lastImagePath!), fit: BoxFit.cover)):Icon(Icons.photo, color: Colors.white)),
-              GestureDetector(
-                onTap: () => isPhotoMode? takePicture() : toggleRecording(),
-                child: Container(width: 80, height: 80, decoration: BoxDecoration(color: isRecording?Colors.red:Colors.white, shape: BoxShape.circle, border: Border.all(width: 4, color: Colors.white)), child: Icon(isPhotoMode?Icons.camera_alt:isRecording?Icons.stop:Icons.videocam, color: isRecording?Colors.white:Colors.black)),
-              ),
-              SizedBox(width: 60),
-            ]),
-          ]))),
-        ],
-      ),
+        Positioned(bottom:0,left:0,right:0, child: Container(padding: EdgeInsets.fromLTRB(20,15,20,35), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black87])), child: Column(children: [
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            _mode("PRO", isProMode, ()=>setState(()=>isProMode=!isProMode)),
+            SizedBox(width:18), _mode("PHOTO", isPhoto&&!isProMode, ()=>setState((){isPhoto=true; isProMode=false;})),
+            SizedBox(width:18), _mode("VIDEO",!isPhoto&&!isProMode, ()=>setState((){isPhoto=false; isProMode=false;})),
+            SizedBox(width:18), _mode("MACRO", isMacro, () async { if(cameras.length>2){ setState(()=>isReady=false); await startCam(isMacro?0:2); setState(()=>isMacro=!isMacro);} else { isMacro=!isMacro; controller.setZoomLevel(isMacro?2.5:1.0); setState((){});} }),
+          ]),
+          SizedBox(height:20),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+            Icon(Icons.photo_library, color: Colors.white, size:28),
+            GestureDetector(onTap: () async { if(isPhoto||isProMode){ var x=await controller.takePicture(); await ImageGallerySaver.saveFile(x.path); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Saved!"))); } else { if(isRecording){ var x=await controller.stopVideoRecording(); await ImageGallerySaver.saveFile(x.path); setState(()=>isRecording=false);} else { await controller.startVideoRecording(); setState(()=>isRecording=true);} } }, child: Container(width:78,height:78, decoration: BoxDecoration(color: isRecording?Colors.red:Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width:4)), child: Icon(isPhoto||isProMode?Icons.camera_alt:isRecording?Icons.stop:Icons.videocam, color: isRecording?Colors.white:Colors.black, size:30))),
+            GestureDetector(onTap: ()=>setState(()=>isProMode=!isProMode), child: Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: isProMode?Colors.yellow:Colors.black54, shape: BoxShape.circle), child: Icon(Icons.tune, color: isProMode?Colors.black:Colors.white))),
+          ]),
+        ]))),
+      ]),
     );
   }
-}
+  Widget _btn(IconData i, VoidCallback t, {bool active=false}) => GestureDetector(onTap: t, child: Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: active?Colors.yellow:Colors.black54, shape: BoxShape.circle), child: Icon(i, color: active?Colors.black:Colors.white, size:20)));
+  Widget _mode(String t, bool a, VoidCallback tap) => GestureDetector(onTap: tap, child: Text(t, style: TextStyle(color: a?Colors.yellow:Colors.white70, fontWeight: a?FontWeight.bold:FontWeight.normal, fontSize:12)));
+}2
