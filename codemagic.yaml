@@ -4,9 +4,9 @@ workflows:
     max_build_duration: 20
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.22.3
+          flutter: 3.22.3
         scripts:
-         - name: Fix project
+              - name: Fix project
             script: |
               flutter clean
               rm -rf android
