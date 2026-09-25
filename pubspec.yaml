@@ -1,20 +1,16 @@
-name: my_8k_camera
-description: 8K Pro Camera
+name: killer_camera
+description: KILLER CAMERA - World No.1
 publish_to: 'none'
 version: 1.0.0+1
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
   camera: ^0.10.5+9
-  gal: ^2.3.0
+  gal: ^2.3.1
   permission_handler: ^11.3.1
-dev_dependencies:
-  flutter_launcher_icons: "0.13.1"
+  speech_to_text: ^6.6.2
+  audioplayers: ^6.0.0
 flutter:
   uses-material-design: true
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: false
-  image_path: "assets/icon.png"
