@@ -1,18 +1,17 @@
 workflows:
   android-workflow:
-    name: Killer Camera Top
+    name: Killer Camera Final
     instance_type: mac_mini_m2
     environment:
       flutter: 3.27.4
       java: 17
     scripts:
-      - name: Clean Fix
+      - name: Fix Gradle
         script: |
           rm -rf android
-          flutter create. --platforms=android --project-name my_8k_camera
+          flutter create . --platforms=android --project-name my_8k_camera --org com.killer.camera
           flutter pub get
       - name: Build APK
-        script: |
-          flutter build apk --release --no-tree-shake-icons
+        script: flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
