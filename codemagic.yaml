@@ -1,31 +1,27 @@
 workflows:
   android-workflow:
-    name: Build 8K Camera APK
+    name: Killer Top Build
     instance_type: mac_mini_m2
-    max_build_duration: 30
     environment:
-      flutter: stable
+      flutter: 3.24.5
+      java: 17
     scripts:
-      - name: Create project and patch GAL
+      - name: Fix AGP 9 Issue
         script: |
           rm -rf android
           flutter create . --platforms=android --project-name my_8k_camera
           flutter pub get
           
-          # Fix for both old and new Gradle file
-          if [ -f "android/app/build.gradle" ]; then
-            sed -i.bak "s/flutter.compileSdkVersion=.*/flutter.compileSdkVersion=34/" android/app/build.gradle || true
-            sed -i.bak "s/flutter.targetSdkVersion=.*/flutter.targetSdkVersion=34/" android/app/build.gradle || true
-            sed -i.bak "s/compileSdk.*/compileSdk 34/" android/app/build.gradle || true
-          fi
-          if [ -f "android/app/build.gradle.kts" ]; then
-            sed -i.bak "s/compileSdk.*/compileSdk = 34/" android/app/build.gradle.kts || true
-          fi
-          echo "flutter.compileSdkVersion=34" >> android/local.properties
-          echo "flutter.targetSdkVersion=34" >> android/local.properties
+          # AGP 9 la force karun 8.7 var aan
+          sed -i.bak "s/id(\"com.android.application\") version \"8.*/id(\"com.android.application\") version \"8.7.3\" apply false/" android/settings.gradle.kts || true
+          sed -i.bak "s/id(\"com.android.library\") version \"8.*/id(\"com.android.library\") version \"8.7.3\" apply false/" android/settings.gradle.kts || true
           
+          # jcenter fix
+          echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
+          echo "android.newDsl=false" >> android/gradle.properties
+
       - name: Build APK
         script: |
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
