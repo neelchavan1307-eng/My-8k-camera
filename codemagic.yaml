@@ -6,10 +6,14 @@ workflows:
       flutter: 3.24.5
       java: 17
     scripts:
+      - name: Fix Old Gradle Project
+        script: |
+          rm -rf android
+          flutter create . --platforms=android --project-name my_8k_camera
+          flutter pub get
+          
       - name: Build APK
         script: |
-          flutter clean
-          flutter pub get
           flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
