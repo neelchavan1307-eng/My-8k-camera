@@ -8,14 +8,14 @@ workflows:
     scripts:
       - name: Create project and patch GAL
         script: |
-          flutter create . --platforms=android --project-name my_8k_camera --overwrite
+          flutter create . --platforms=android --project-name my_8k_camera
           flutter pub get
           echo "flutter.compileSdkVersion=34" > android/local.properties
           echo "flutter.targetSdkVersion=34" >> android/local.properties
           echo "flutter.minSdkVersion=23" >> android/local.properties
-          sed -i.bak "s/flutter.compileSdkVersion/34/g" android/app/build.gradle || true
-          sed -i.bak "s/flutter.targetSdkVersion/34/g" android/app/build.gradle || true
-          find $HOME/.pub-cache -name build.gradle | xargs sed -i.bak "s/33/34/g" 2>/dev/null || true
+          sed -i.bak "s/flutter.compileSdkVersion/34/g" android/app/build.gradle
+          sed -i.bak "s/flutter.targetSdkVersion/34/g" android/app/build.gradle
+          find $HOME/.pub-cache -name build.gradle -exec sed -i.bak "s/33/34/g" {} \;
           dart run flutter_launcher_icons
       - name: Build APK
         script: |
