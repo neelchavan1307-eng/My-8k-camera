@@ -11,13 +11,19 @@ workflows:
           rm -rf android
           flutter create . --platforms=android --project-name my_8k_camera
           flutter pub get
-          echo "flutter.compileSdkVersion=34" > android/local.properties
+          
+          # Fix for both old and new Gradle file
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i.bak "s/flutter.compileSdkVersion=.*/flutter.compileSdkVersion=34/" android/app/build.gradle || true
+            sed -i.bak "s/flutter.targetSdkVersion=.*/flutter.targetSdkVersion=34/" android/app/build.gradle || true
+            sed -i.bak "s/compileSdk.*/compileSdk 34/" android/app/build.gradle || true
+          fi
+          if [ -f "android/app/build.gradle.kts" ]; then
+            sed -i.bak "s/compileSdk.*/compileSdk = 34/" android/app/build.gradle.kts || true
+          fi
+          echo "flutter.compileSdkVersion=34" >> android/local.properties
           echo "flutter.targetSdkVersion=34" >> android/local.properties
-          echo "flutter.minSdkVersion=23" >> android/local.properties
-          sed -i.bak "s/flutter.compileSdkVersion/34/g" android/app/build.gradle
-          sed -i.bak "s/flutter.targetSdkVersion/34/g" android/app/build.gradle
-          find $HOME/.pub-cache -name build.gradle -exec sed -i.bak "s/33/34/g" {} \;
-          dart run flutter_launcher_icons
+          
       - name: Build APK
         script: |
           flutter build apk --release
