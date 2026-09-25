@@ -6,16 +6,21 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Create project and fix SDK 36
+      - name: Create project and FIX GAL to SDK 34
         script: |
-          flutter create . --platforms=android
+          flutter create . --platforms=android --project-name my_8k_camera
+          # gal cha latest version ghe
+          flutter pub upgrade gal
           flutter pub get
-          sed -i '' 's/compileSdkVersion 33/compileSdkVersion 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/compileSdkVersion 33/compileSdkVersion 36/g' android/app/build.gradle
-          sed -i '' 's/compileSdk 33/compileSdk 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/compileSdk 33/compileSdk 36/g' android/app/build.gradle
-          sed -i '' 's/targetSdkVersion 33/targetSdkVersion 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/targetSdkVersion 33/targetSdkVersion 36/g' android/app/build.gradle
-          sed -i '' 's/targetSdk 33/targetSdk 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/targetSdk 33/targetSdk 36/g' android/app/build.gradle
-          sed -i '' 's/flutter.compileSdkVersion/36/g' android/app/build.gradle 2>/dev/null || sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle
-          sed -i '' 's/flutter.targetSdkVersion/36/g' android/app/build.gradle 2>/dev/null || sed -i 's/flutter.targetSdkVersion/36/g' android/app/build.gradle
+          # App la SDK 34 force
+          echo "flutter.compileSdkVersion=34
+          flutter.targetSdkVersion=34
+          flutter.minSdkVersion=23" > android/local.properties
+          # MAIN FIX - gal library cha build.gradle patch
+          find $HOME/.pub-cache -path "*gal*" -name "build.gradle" -exec sed -i.bak 's/compileSdkVersion 33/compileSdkVersion 34/g; s/compileSdk 33/compileSdk 34/g; s/33/34/g' {} \; || true
+          find $HOME -path "*gal*" -name "build.gradle" -exec sed -i.bak 's/compileSdkVersion 33/compileSdkVersion 34/g; s/compileSdk 33/compileSdk 34/g' {} \; 2>/dev/null || true
+          # Verify
+          grep -r "compileSdk" $HOME/.pub-cache/hosted/pub.dev/gal-*/android/build.gradle || true
           dart run flutter_launcher_icons
       - name: Build APK
         script: |
