@@ -1,14 +1,20 @@
 name: my_8k_camera
-description: 8K DSLR Camera
+description: 8K Pro Camera
 publish_to: 'none'
 version: 1.0.0+1
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.4.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
   camera: ^0.10.5+9
   gal: ^2.3.0
   permission_handler: ^11.3.1
+dev_dependencies:
+  flutter_launcher_icons: "0.13.1"
 flutter:
   uses-material-design: true
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/icon.png"
