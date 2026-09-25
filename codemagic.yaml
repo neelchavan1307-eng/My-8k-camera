@@ -1,1 +1,17 @@
-workflows: { android-workflow: { name: Android Workflow, max_build_duration: 60, instance_type: mac_mini_m2, environment: { flutter: 3.22.3 }, scripts: [{ name: Fix project, script: "flutter clean\nrm -rf android\nflutter create . --platforms=android --org com.example.my8kcamera\nflutter pub get" }, { name: Build APK, script: "flutter build apk --release --no-tree-shake-icons" }], artifacts: ["build/app/outputs/flutter-apk/*.apk"] } }
+workflows:
+  android-workflow:
+    name: Build 8K Camera APK
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get dependencies and generate icon
+        script: |
+          flutter pub get
+          flutter pub run flutter_launcher_icons
+      - name: Build APK
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
