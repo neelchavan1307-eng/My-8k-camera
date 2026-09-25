@@ -1,17 +1,16 @@
 workflows:
   android-workflow:
-    name: Killer Top Build
+    name: Killer Top Build 2026
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Old Gradle Project
+      - name: Full Clean Fix
         script: |
-          rm -rf android
+          rm -rf android ios
           flutter create . --platforms=android --project-name my_8k_camera
           flutter pub get
-          
       - name: Build APK
         script: |
           flutter build apk --release --no-tree-shake-icons
