@@ -6,22 +6,10 @@ workflows:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix AGP 9 Issue
-        script: |
-          rm -rf android
-          flutter create . --platforms=android --project-name my_8k_camera
-          flutter pub get
-          
-          # AGP 9 la force karun 8.7 var aan
-          sed -i.bak "s/id(\"com.android.application\") version \"8.*/id(\"com.android.application\") version \"8.7.3\" apply false/" android/settings.gradle.kts || true
-          sed -i.bak "s/id(\"com.android.library\") version \"8.*/id(\"com.android.library\") version \"8.7.3\" apply false/" android/settings.gradle.kts || true
-          
-          # jcenter fix
-          echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
-          echo "android.newDsl=false" >> android/gradle.properties
-
       - name: Build APK
         script: |
+          flutter clean
+          flutter pub get
           flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
