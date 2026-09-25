@@ -6,10 +6,11 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Get dependencies and generate icon
+      - name: Create Android project and icon
         script: |
+          flutter create . --platforms=android
           flutter pub get
-          flutter pub run flutter_launcher_icons
+          dart run flutter_launcher_icons
       - name: Build APK
         script: |
           flutter build apk --release
