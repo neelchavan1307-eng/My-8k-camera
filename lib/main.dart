@@ -125,4 +125,4 @@ class DialPainter extends CustomPainter {
     }
   }
   @override bool shouldRepaint(covariant DialPainter old)=> old.zoom!=zoom;
-}1
+}
