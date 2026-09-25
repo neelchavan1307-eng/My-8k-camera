@@ -111,4 +111,4 @@ class DialPainter extends CustomPainter {
     for(double i=0.6;i<=4.0;i+=0.1){ double x=s.width/2 + (i-zoom)*70; if(x<15||x>s.width-15) continue; bool big=(i==0.6||i==1.0||i==2.0||i==4.0); c.drawLine(Offset(x,25), Offset(x,25+(big?16:7)), big?bp:sp); if(big){ String t=i==0.6?"0.6": i==1.0?"1\n25mm":"${i.toInt()}"; var tp=TextPainter(text: TextSpan(text: t, style: TextStyle(color: Colors.white70, fontSize:9)), textDirection: TextDirection.ltr)..layout(); tp.paint(c, Offset(x-7,50)); } }
   }
   @override bool shouldRepaint(covariant DialPainter old)=> old.zoom!=zoom;
-}w
+}
