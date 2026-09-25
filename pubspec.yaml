@@ -1,5 +1,5 @@
 name: my_8k_camera
-description: Killer Camera Top
+description: Killer Camera Top 2026
 publish_to: 'none'
 version: 1.0.0+1
 environment:
@@ -9,6 +9,5 @@ dependencies:
     sdk: flutter
   camera: ^0.10.5+9
   permission_handler: ^11.3.1
-  speech_to_text: ^7.0.0
 flutter:
   uses-material-design: true
