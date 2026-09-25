@@ -6,10 +6,16 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Create Android project and icon
+      - name: Create project and fix SDK 36
         script: |
           flutter create . --platforms=android
           flutter pub get
+          sed -i '' 's/compileSdkVersion 33/compileSdkVersion 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/compileSdkVersion 33/compileSdkVersion 36/g' android/app/build.gradle
+          sed -i '' 's/compileSdk 33/compileSdk 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/compileSdk 33/compileSdk 36/g' android/app/build.gradle
+          sed -i '' 's/targetSdkVersion 33/targetSdkVersion 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/targetSdkVersion 33/targetSdkVersion 36/g' android/app/build.gradle
+          sed -i '' 's/targetSdk 33/targetSdk 36/g' android/app/build.gradle 2>/dev/null || sed -i 's/targetSdk 33/targetSdk 36/g' android/app/build.gradle
+          sed -i '' 's/flutter.compileSdkVersion/36/g' android/app/build.gradle 2>/dev/null || sed -i 's/flutter.compileSdkVersion/36/g' android/app/build.gradle
+          sed -i '' 's/flutter.targetSdkVersion/36/g' android/app/build.gradle 2>/dev/null || sed -i 's/flutter.targetSdkVersion/36/g' android/app/build.gradle
           dart run flutter_launcher_icons
       - name: Build APK
         script: |
