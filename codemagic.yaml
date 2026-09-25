@@ -6,13 +6,16 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Fix all to SDK 34
+      - name: Create project and patch GAL
         script: |
-          flutter create . --platforms=android --project-name my_8k_camera
+          flutter create . --platforms=android --project-name my_8k_camera --overwrite
           flutter pub get
-          printf "subprojects{afterEvaluate{p->if(p.hasProperty('android')){p.android{compileSdkVersion 34}}}}\n" >> android/build.gradle
           echo "flutter.compileSdkVersion=34" > android/local.properties
           echo "flutter.targetSdkVersion=34" >> android/local.properties
+          echo "flutter.minSdkVersion=23" >> android/local.properties
+          sed -i.bak "s/flutter.compileSdkVersion/34/g" android/app/build.gradle || true
+          sed -i.bak "s/flutter.targetSdkVersion/34/g" android/app/build.gradle || true
+          find $HOME/.pub-cache -name build.gradle | xargs sed -i.bak "s/33/34/g" 2>/dev/null || true
           dart run flutter_launcher_icons
       - name: Build APK
         script: |
