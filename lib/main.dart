@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -25,7 +26,6 @@ class _KillerTopState extends State<KillerTop> {
   String filter = "Original";
   FlashMode flash = FlashMode.off;
   bool isFront = false;
-
   List<String> modes = ["Ultra HD", "Video", "Photo", "Portrait", "Cinematic"];
   List<String> filters = ["Original", "KGF", "RRR", "Vivid", "B&W"];
 
@@ -49,15 +49,36 @@ class _KillerTopState extends State<KillerTop> {
     ctrl?.setZoomLevel(zoom);
   }
 
+  // SOUND + VIBRATION LOGIC
+  Future<void> shoot() async {
+    if (mode == "Video") {
+      if (rec) {
+        HapticFeedback.heavyImpact();
+        SystemSound.play(SystemSoundType.click);
+        Feedback.forLongPress(context);
+        var f = await ctrl!.stopVideoRecording();
+        setState(() => rec = false);
+        await Gal.putVideo(f.path);
+      } else {
+        HapticFeedback.mediumImpact();
+        SystemSound.play(SystemSoundType.click);
+        Feedback.forTap(context);
+        await ctrl!.startVideoRecording();
+        setState(() => rec = true);
+      }
+    } else {
+      HapticFeedback.mediumImpact();
+      SystemSound.play(SystemSoundType.click);
+      var f = await ctrl!.takePicture();
+      await Gal.putImage(f.path);
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("📸 KILLER CLICK!"), duration: Duration(milliseconds: 400)));
+    }
+  }
+
   Future<void> toggleFlash() async {
     try {
-      if (flash == FlashMode.off) {
-        await ctrl!.setFlashMode(FlashMode.torch);
-        setState(() => flash = FlashMode.torch);
-      } else {
-        await ctrl!.setFlashMode(FlashMode.off);
-        setState(() => flash = FlashMode.off);
-      }
+      if (flash == FlashMode.off) { await ctrl!.setFlashMode(FlashMode.torch); setState(() => flash = FlashMode.torch); }
+      else { await ctrl!.setFlashMode(FlashMode.off); setState(() => flash = FlashMode.off); }
     } catch (e) {}
   }
 
@@ -76,13 +97,6 @@ class _KillerTopState extends State<KillerTop> {
     }
   }
 
-  Future<void> shoot() async {
-    if (mode == "Video") {
-      if (rec) { var f = await ctrl!.stopVideoRecording(); setState(() => rec = false); await Gal.putVideo(f.path); }
-      else { await ctrl!.startVideoRecording(); setState(() => rec = true); }
-    } else { var f = await ctrl!.takePicture(); await Gal.putImage(f.path); }
-  }
-
   @override Widget build(BuildContext context) {
     if (!ready || ctrl == null) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.amber)));
     return Scaffold(
@@ -92,23 +106,8 @@ class _KillerTopState extends State<KillerTop> {
         Positioned(top: 45, left: 0, right: 0, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)), child: Text("KILLER CAM • ${zoom.toStringAsFixed(1)}x", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))))),
         Positioned(top: 85, left: 0, right: 0, height: 38, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: modes.map((m) => GestureDetector(onTap: () => setState(() => mode = m), child: Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: m == mode? Colors.white : Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text(m, style: TextStyle(color: m == mode? Colors.black : Colors.white, fontSize: 12, fontWeight: FontWeight.bold))))).toList())),
         Positioned(top: 130, left: 0, right: 0, height: 32, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: filters.map((f) => GestureDetector(onTap: () => setState(() => filter = f), child: Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: f == filter? Colors.amber : Colors.black54, borderRadius: BorderRadius.circular(15)), child: Text(f, style: TextStyle(color: f == filter? Colors.black : Colors.white, fontSize: 11))))).toList())),
-
-        // 1x fakt - dabun dhara text nahi
         Positioned(bottom: 150, left: 0, right: 0, child: Center(child: GestureDetector(onLongPress: () => setState(() => showDial = true), onTap: () => setState(() => showDial =!showDial), child: Container(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7), decoration: BoxDecoration(color: showDial? Colors.amber : Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text("${zoom.toStringAsFixed(1)}x", style: TextStyle(color: showDial? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))))),
-
-        // CHOTI DIAL - iPhone sarkhi patti
-        if (showDial)
-          Positioned(
-            bottom: 90, left: 60, right: 60, height: 50,
-            child: GestureDetector(
-              onHorizontalDragUpdate: (d) { setZ(zoom - (d.primaryDelta??0) * 0.06); },
-              child: Container(
-                decoration: BoxDecoration(color: Colors.black.withOpacity(0.8), borderRadius: BorderRadius.circular(25)),
-                child: CustomPaint(painter: SmallDialPainter(zoom)),
-              ),
-            ),
-          ),
-
+        if (showDial) Positioned(bottom: 90, left: 60, right: 60, height: 50, child: GestureDetector(onHorizontalDragUpdate: (d) { setZ(zoom - (d.primaryDelta??0) * 0.06); }, child: Container(decoration: BoxDecoration(color: Colors.black.withOpacity(0.8), borderRadius: BorderRadius.circular(25)), child: CustomPaint(painter: SmallDialPainter(zoom))))),
         Positioned(bottom: 12, left: 20, right: 20, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           GestureDetector(onTap: toggleFlash, child: Container(width: 50, height: 50, decoration: BoxDecoration(color: flash == FlashMode.torch? Colors.amber : Colors.white24, shape: BoxShape.circle), child: Icon(flash == FlashMode.torch? Icons.flash_on : Icons.flash_off, color: flash == FlashMode.torch? Colors.black : Colors.white))),
           GestureDetector(onTap: shoot, child: Container(width: 78, height: 78, decoration: BoxDecoration(color: rec? Colors.red : Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)), child: Icon(rec? Icons.stop : Icons.circle, color: rec? Colors.white : Colors.red, size: rec? 36 : 74))),
@@ -126,8 +125,7 @@ class SmallDialPainter extends CustomPainter {
     c.drawLine(Offset(cx, 10), Offset(cx, 20), Paint()..color = Colors.amber..strokeWidth = 2.5);
     List<double> zs = [0.6, 1.0, 2.0, 3.0, 4.0, 6.0, 10.0];
     for (double z in zs) {
-      double curT = (cur - 0.6) / 9.4;
-      double t = (z - 0.6) / 9.4;
+      double curT = (cur - 0.6) / 9.4; double t = (z - 0.6) / 9.4;
       double x = cx + (t - curT) * s.width * 0.8;
       if (x < 10 || x > s.width - 10) continue;
       bool isCur = (cur - z).abs() < 0.2;
