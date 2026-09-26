@@ -6,70 +6,256 @@ import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 List<CameraDescription> allCams = [];
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   allCams = await availableCameras();
-  runApp(const MaterialApp(debugShowCheckedModeBanner:false, home: KillerTop()));
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: KillerTop(),
+  ));
 }
-class KillerTop extends StatefulWidget { const KillerTop({super.key}); @override State<KillerTop> createState()=>_KillerTopState(); }
-class _KillerTopState extends State<KillerTop> {
-  CameraController? ctrl; bool ready=false; bool rec=false; double zoom=1.0; String mode="Photo"; String filter="Original"; int sec=0; Timer? timer; bool flash=false;
-  List<String> modes=["Ultra HD","Video","Photo","Portrait","Cinematic","Night","Astro"];
-  List<String> filters=["Original","KGF","RRR","Dune","Vivid","B&W"];
 
-  @override void initState(){ super.initState(); init(); }
-  Future<void> init() async {
-    await [Permission.camera, Permission.microphone, Permission.photos].request();
-    ctrl = CameraController(allCams[0], ResolutionPreset.ultraHigh, enableAudio:true);
-    await ctrl!.initialize();
-    setState(()=>ready=true);
+class KillerTop extends StatefulWidget {
+  const KillerTop({super.key});
+  @override
+  State<KillerTop> createState() => _KillerTopState();
+}
+
+class _KillerTopState extends State<KillerTop> {
+  CameraController? ctrl;
+  bool ready = false;
+  bool rec = false;
+  double zoom = 1.0;
+  String mode = "Photo";
+  String filter = "Original";
+  int sec = 0;
+  Timer? timer;
+  bool flash = false;
+
+  List<String> modes = ["Ultra HD", "Video", "Photo", "Portrait", "Cinematic", "Night"];
+  List<String> filters = ["Original", "KGF", "RRR", "Dune", "Vivid", "B&W"];
+
+  @override
+  void initState() {
+    super.initState();
+    initCam();
   }
-  Future<void> setZ(double z) async { if(z<0.6) z=0.6; if(z>100) z=100; try{ await ctrl!.setZoomLevel(z.clamp(0.6, 10.0)); }catch(e){} setState(()=>zoom=z); }
-  ColorFilter getF(){ switch(filter){ case "Vivid": return const ColorFilter.matrix([1.4,0,0,0,-20,0,1.4,0,0,-20,0,0,1.4,0,-20,0,0,0,1,0]); case "B&W": return const ColorFilter.matrix([0.21,0.72,0.07,0,0,0.21,0.72,0.07,0,0,0.21,0.72,0.07,0,0,0,0,0,1,0]); case "KGF": return const ColorFilter.matrix([1.4,0.2,0,0,10,0.2,1.1,0,0,5,0,0,0.6,0,-5,0,0,0,1,0]); case "RRR": return const ColorFilter.matrix([1.3,0,0,0,15,0,1.2,0,0,5,0,0,0.9,0,0,0,0,0,1,0]); default: return const ColorFilter.matrix([1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0]); } }
+
+  Future<void> initCam() async {
+    await [Permission.camera, Permission.microphone, Permission.photos].request();
+    ctrl = CameraController(allCams[0], ResolutionPreset.veryHigh, enableAudio: true);
+    await ctrl!.initialize();
+    setState(() => ready = true);
+  }
+
+  Future<void> setZ(double z) async {
+    if (z < 0.6) z = 0.6;
+    if (z > 100) z = 100;
+    try {
+      await ctrl!.setZoomLevel(z.clamp(0.6, 10.0));
+    } catch (e) {}
+    setState(() => zoom = z);
+  }
+
+  ColorFilter getF() {
+    switch (filter) {
+      case "Vivid":
+        return const ColorFilter.matrix([1.4,0,0,0,-20, 0,1.4,0,0,-20, 0,0,1.4,0,-20, 0,0,0,1,0]);
+      case "B&W":
+        return const ColorFilter.matrix([0.21,0.72,0.07,0,0, 0.21,0.72,0.07,0,0, 0.21,0.72,0.07,0,0, 0,0,0,1,0]);
+      case "KGF":
+        return const ColorFilter.matrix([1.4,0.2,0,0,10, 0.2,1.1,0,0,5, 0,0,0.6,0,-5, 0,0,0,1,0]);
+      case "RRR":
+        return const ColorFilter.matrix([1.3,0,0,0,15, 0,1.2,0,0,5, 0,0,0.9,0,0, 0,0,0,1,0]);
+      default:
+        return const ColorFilter.matrix([1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0]);
+    }
+  }
 
   Future<void> shoot() async {
-    if(mode=="Video"||mode=="Ultra HD"){
-      if(rec){ timer?.cancel(); var f=await ctrl!.stopVideoRecording(); setState(()=>rec=false); await Gal.putVideo(f.path); if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text("Video Gallery madhe Save zala!"))); }
-      else{ await ctrl!.startVideoRecording(); setState(()=>rec=true); sec=0; timer=Timer.periodic(const Duration(seconds:1),(t)=>setState(()=>sec++)); }
+    if (mode == "Video" || mode == "Ultra HD") {
+      if (rec) {
+        timer?.cancel();
+        var f = await ctrl!.stopVideoRecording();
+        setState(() => rec = false);
+        await Gal.putVideo(f.path);
+      } else {
+        await ctrl!.startVideoRecording();
+        setState(() { rec = true; sec = 0; });
+        timer = Timer.periodic(const Duration(seconds: 1), (t) {
+          setState(() => sec++);
+        });
+      }
     } else {
-      setState(()=>flash=true); await Future.delayed(const Duration(milliseconds:120)); var f=await ctrl!.takePicture(); setState(()=>flash=false); await Gal.putImage(f.path); if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text("Photo Gallery madhe Save zala!")));
+      setState(() => flash = true);
+      await Future.delayed(const Duration(milliseconds: 120));
+      var f = await ctrl!.takePicture();
+      setState(() => flash = false);
+      await Gal.putImage(f.path);
     }
   }
 
-  @override Widget build(BuildContext context){
-    if(!ready) return const Scaffold(backgroundColor:Colors.black, body:Center(child:CircularProgressIndicator(color:Colors.amber)));
-    bool cine = mode=="Cinematic";
-    return Scaffold(backgroundColor:Colors.black, body:Stack(children:[
-      ColorFiltered(colorFilter:getF(), child:SizedBox.expand(child:CameraPreview(ctrl!))),
-      if(cine) Positioned(top:0,left:0,right:0,height:90,child:Container(color:Colors.black)),
-      if(cine) Positioned(bottom:0,left:0,right:0,height:155,child:Container(color:Colors.black)),
-      if(flash) Container(color:Colors.white.withOpacity(0.92)),
-      Positioned(top:40,left:0,right:0,child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:14,vertical:6),decoration:BoxDecoration(color:Colors.amber,borderRadius:BorderRadius.circular(20)),child:Text("KILLER CAMERA TOP • ${zoom.toStringAsFixed(1)}x",style:const TextStyle(color:Colors.black,fontWeight:FontWeight.bold,fontSize:11))))),
-      Positioned(top:85,left:0,right:0,child:SizedBox(height:38,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),children:modes.map((m){bool s=m==mode; return GestureDetector(onTap:()=>setState(()=>mode=m),child:Container(margin:const EdgeInsets.only(right:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),decoration:BoxDecoration(color:s?Colors.white:Colors.black54,borderRadius:BorderRadius.circular(20)),child:Text(m,style:TextStyle(color:s?Colors.black:Colors.white,fontSize:12,fontWeight:FontWeight.bold))));}.toList()))),
-      Positioned(top:130,left:0,right:0,child:SizedBox(height:32,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),children:filters.map((f){bool s=f==filter; return GestureDetector(onTap:()=>setState(()=>filter=f),child:Container(margin:const EdgeInsets.only(right:8),padding:const EdgeInsets.symmetric(horizontal:14,vertical:6),decoration:BoxDecoration(color:s?Colors.amber:Colors.black54,borderRadius:BorderRadius.circular(20)),child:Text(f,style:TextStyle(color:s?Colors.black:Colors.white,fontSize:10))));}.toList()))),
-      Positioned(bottom:165,left:0,right:0,child:Center(child:Text("${zoom.toStringAsFixed(1)}x ${rec?'• $sec s':''}",style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:16)))),
-      Positioned(bottom:75,left:0,right:0,child:SizedBox(height:90,child:GestureDetector(onPanUpdate:(d){ double nz=zoom - d.delta.dx*0.6; setZ(nz); },child:CustomPaint(painter: DialPainter(zoom))))),
-      Positioned(bottom:12,left:20,right:20,child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Container(width:50,height:50,decoration:const BoxDecoration(color:Colors.white24,shape:BoxShape.circle),child:const Icon(Icons.flash_auto,color:Colors.white)),GestureDetector(onTap:shoot,child:Container(width:80,height:80,decoration:BoxDecoration(color:rec?Colors.red:Colors.white,shape:BoxShape.circle,border:Border.all(color:Colors.white,width:4)),child:Icon(rec?Icons.stop:Icons.circle,color:rec?Colors.white:Colors.red,size:rec?36:74))),GestureDetector(onTap:()async{var n=allCams.length>1&&ctrl!.description==allCams[0]?allCams[1]:allCams[0]; ctrl=CameraController(n,ResolutionPreset.ultraHigh,enableAudio:true); await ctrl!.initialize(); setState((){});},child:Container(width:50,height:50,decoration:const BoxDecoration(color:Colors.white24,shape:BoxShape.circle),child:const Icon(Icons.cameraswitch,color:Colors.white)))]))
-    ]));
+  @override
+  Widget build(BuildContext context) {
+    if (!ready) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.amber)),
+      );
+    }
+    bool cine = mode == "Cinematic";
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          ColorFiltered(
+            colorFilter: getF(),
+            child: SizedBox.expand(child: CameraPreview(ctrl!)),
+          ),
+          if (cine)
+            Positioned(top: 0, left: 0, right: 0, height: 90, child: Container(color: Colors.black)),
+          if (cine)
+            Positioned(bottom: 0, left: 0, right: 0, height: 155, child: Container(color: Colors.black)),
+          if (flash) Container(color: Colors.white.withOpacity(0.92)),
+
+          Positioned(
+            top: 45,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)),
+                child: Text("KILLER CAM • ${zoom.toStringAsFixed(1)}x", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: 85,
+            left: 0,
+            right: 0,
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: modes.map((m) {
+                bool s = m == mode;
+                return GestureDetector(
+                  onTap: () => setState(() => mode = m),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(color: s? Colors.white : Colors.black54, borderRadius: BorderRadius.circular(20)),
+                    child: Text(m, style: TextStyle(color: s? Colors.black : Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+          Positioned(
+            top: 130,
+            left: 0,
+            right: 0,
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: filters.map((f) {
+                bool s = f == filter;
+                return GestureDetector(
+                  onTap: () => setState(() => filter = f),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(color: s? Colors.amber : Colors.black54, borderRadius: BorderRadius.circular(20)),
+                    child: Text(f, style: TextStyle(color: s? Colors.black : Colors.white, fontSize: 10)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+          Positioned(
+            bottom: 165,
+            left: 0,
+            right: 0,
+            child: Center(child: Text("${zoom.toStringAsFixed(1)}x ${rec? '• $sec s' : ''}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
+          ),
+
+          Positioned(
+            bottom: 75,
+            left: 0,
+            right: 0,
+            height: 90,
+            child: GestureDetector(
+              onPanUpdate: (d) {
+                double nz = zoom - d.delta.dx * 0.6;
+                setZ(nz);
+              },
+              child: CustomPaint(painter: DialPainter(zoom)),
+            ),
+          ),
+
+          Positioned(
+            bottom: 12,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(width: 50, height: 50, decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle), child: const Icon(Icons.flash_auto, color: Colors.white)),
+                GestureDetector(
+                  onTap: shoot,
+                  child: Container(width: 80, height: 80, decoration: BoxDecoration(color: rec? Colors.red : Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)), child: Icon(rec? Icons.stop : Icons.circle, color: rec? Colors.white : Colors.red, size: rec? 36 : 74)),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    var n = allCams.length > 1 && ctrl!.description == allCams[0]? allCams[1] : allCams[0];
+                    ctrl = CameraController(n, ResolutionPreset.veryHigh, enableAudio: true);
+                    await ctrl!.initialize();
+                    setState(() {});
+                  },
+                  child: Container(width: 50, height: 50, decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle), child: const Icon(Icons.cameraswitch, color: Colors.white)),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
   }
 }
-class DialPainter extends CustomPainter{
-  final double cur; DialPainter(this.cur);
-  @override void paint(Canvas c, Size s){
-    double cx=s.width/2, cy=s.height, r=s.width*0.48;
-    for(double z=0.6; z<=100; z+=0.6){
-      double ang = pi + (z/100)*pi;
+
+class DialPainter extends CustomPainter {
+  final double cur;
+  DialPainter(this.cur);
+  @override
+  void paint(Canvas c, Size s) {
+    double cx = s.width / 2;
+    double cy = s.height;
+    double r = s.width * 0.48;
+    for (double z = 0.6; z <= 100; z += 0.6) {
+      double ang = pi + (z / 100) * pi;
       double len = 6;
-      if([0.6,1,2,5,10,20,50,100].contains(double.parse(z.toStringAsFixed(1)))) len=18;
-      double x1=cx+r*cos(ang), y1=cy+r*sin(ang), x2=cx+(r-len)*cos(ang), y2=cy+(r-len)*sin(ang);
-      bool isCur = (cur-z).abs()<0.8;
-      c.drawLine(Offset(x1,y1),Offset(x2,y2),Paint()..color=isCur?Colors.amber:Colors.white54..strokeWidth=isCur?2.5:1);
-      if(len>6){
-        double lx=cx+(r-32)*cos(ang), ly=cy+(r-32)*sin(ang);
-        TextPainter tp=TextPainter(text:TextSpan(text:"${z.toStringAsFixed(z==0.6?1:0)}x",style:TextStyle(color:isCur?Colors.amber:Colors.white70,fontSize:11)),textDirection:TextDirection.ltr); tp.layout(); tp.paint(c,Offset(lx-tp.width/2,ly-6));
+      if ([0.6, 1, 2, 5, 10, 20, 50, 100].contains(double.parse(z.toStringAsFixed(1)))) len = 18;
+      double x1 = cx + r * cos(ang);
+      double y1 = cy + r * sin(ang);
+      double x2 = cx + (r - len) * cos(ang);
+      double y2 = cy + (r - len) * sin(ang);
+      bool isCur = (cur - z).abs() < 0.8;
+      c.drawLine(Offset(x1, y1), Offset(x2, y2), Paint()..color = isCur? Colors.amber : Colors.white54..strokeWidth = isCur? 2.5 : 1);
+      if (len > 6) {
+        double lx = cx + (r - 32) * cos(ang);
+        double ly = cy + (r - 32) * sin(ang);
+        TextPainter tp = TextPainter(text: TextSpan(text: "${z.toStringAsFixed(z == 0.6? 1 : 0)}x", style: TextStyle(color: isCur? Colors.amber : Colors.white70, fontSize: 11)), textDirection: TextDirection.ltr);
+        tp.layout();
+        tp.paint(c, Offset(lx - tp.width / 2, ly - 6));
       }
     }
-    c.drawLine(Offset(cx-12,cy-2),Offset(cx+12,cy-2),Paint()..color=Colors.white..strokeWidth=2);
   }
-  @override bool shouldRepaint(covariant DialPainter o)=>o.cur!=cur;
+  @override
+  bool shouldRepaint(covariant DialPainter o) => o.cur!= cur;
 }
