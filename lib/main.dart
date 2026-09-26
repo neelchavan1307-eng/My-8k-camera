@@ -1,137 +1,272 @@
-import 'package:camera/camera.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:gal/gal.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:camera/camera.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-List<CameraDescription> allCams = [];
-void main() async {
+List<CameraDescription> cameras = [];
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  allCams = await availableCameras();
-  runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: KillerTop()));
+  cameras = await availableCameras();
+  runApp(const KillerApp());
 }
 
-class KillerTop extends StatefulWidget {
-  const KillerTop({super.key});
-  @override State<KillerTop> createState() => _KillerTopState();
-}
-
-class _KillerTopState extends State<KillerTop> {
-  CameraController? ctrl;
-  bool ready = false;
-  bool rec = false;
-  double zoom = 1.0;
-  bool showDial = false;
-  String mode = "Photo";
-  String filter = "Original";
-  FlashMode flash = FlashMode.off;
-  bool isFront = false;
-  List<String> modes = ["Ultra HD", "Video", "Photo", "Portrait", "Cinematic"];
-  List<String> filters = ["Original", "KGF", "RRR", "Vivid", "B&W"];
-
-  @override void initState() { super.initState(); initCam(allCams[0]); }
-
-  Future<void> initCam(CameraDescription cam) async {
-    if (mounted) setState(() => ready = false);
-    await [Permission.camera, Permission.microphone].request();
-    if (ctrl!= null) { await ctrl!.dispose(); ctrl = null; }
-    ctrl = CameraController(cam, ResolutionPreset.high, enableAudio: true);
-    await ctrl!.initialize();
-    await ctrl!.setFlashMode(flash);
-    await ctrl!.setZoomLevel(1.0);
-    if (mounted) setState(() { ready = true; isFront = cam.lensDirection == CameraLensDirection.front; zoom = 1.0; });
-  }
-
-  void setZ(double z) {
-    if (z < 0.6) z = 0.6;
-    if (z > 10.0) z = 10.0;
-    setState(() => zoom = z);
-    ctrl?.setZoomLevel(zoom);
-  }
-
-  // === SOUND LOGIC ===
-  Future<void> shoot() async {
-    // Haptic + System Click Sound
-    HapticFeedback.mediumImpact();
-    SystemSound.play(SystemSoundType.click);
-
-    if (mode == "Video") {
-      if (rec) {
-        var f = await ctrl!.stopVideoRecording();
-        setState(() => rec = false);
-        await Gal.putVideo(f.path);
-      } else {
-        await ctrl!.startVideoRecording();
-        setState(() => rec = true);
-      }
-    } else {
-      var f = await ctrl!.takePicture();
-      await Gal.putImage(f.path);
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("📸 KATAK! Photo Saved"), duration: Duration(milliseconds: 600))
-        );
-      }
-    }
-  }
-
-  Future<void> toggleFlash() async {
-    try {
-      if (flash == FlashMode.off) { await ctrl!.setFlashMode(FlashMode.torch); setState(() => flash = FlashMode.torch); }
-      else { await ctrl!.setFlashMode(FlashMode.off); setState(() => flash = FlashMode.off); }
-    } catch (e) {}
-  }
-
-  Future<void> switchCam() async {
-    CameraDescription newCam = isFront? allCams.firstWhere((c) => c.lensDirection == CameraLensDirection.back) : allCams.firstWhere((c) => c.lensDirection == CameraLensDirection.front, orElse: () => allCams[0]);
-    await initCam(newCam);
-  }
-
-  ColorFilter getF() {
-    switch (filter) {
-      case "Vivid": return const ColorFilter.matrix([1.4,0,0,0,-20, 0,1.4,0,0,-20, 0,0,1.4,0,-20, 0,0,0,1,0]);
-      case "B&W": return const ColorFilter.matrix([0.21,0.72,0.07,0,0, 0.21,0.72,0.07,0,0, 0.21,0.72,0.07,0,0, 0,0,0,1,0]);
-      case "KGF": return const ColorFilter.matrix([1.2,0,0,0,10, 0,1.0,0,0,0, 0,0,0.8,0,0, 0,0,0,1,0]);
-      case "RRR": return const ColorFilter.matrix([1.3,0,0,0,20, 0,1.1,0,0,10, 0,0,0.9,0,0, 0,0,0,1,0]);
-      default: return const ColorFilter.matrix([1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0]);
-    }
-  }
-
-  @override Widget build(BuildContext context) {
-    if (!ready || ctrl == null) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.amber)));
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(children: [
-        ColorFiltered(colorFilter: getF(), child: SizedBox.expand(child: CameraPreview(ctrl!))),
-        Positioned(top: 45, left: 0, right: 0, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)), child: Text("KILLER CAM • ${zoom.toStringAsFixed(1)}x", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))))),
-        Positioned(top: 85, left: 0, right: 0, height: 38, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: modes.map((m) => GestureDetector(onTap: () => setState(() => mode = m), child: Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: m == mode? Colors.white : Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text(m, style: TextStyle(color: m == mode? Colors.black : Colors.white, fontSize: 12, fontWeight: FontWeight.bold))))).toList())),
-        Positioned(top: 130, left: 0, right: 0, height: 32, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: filters.map((f) => GestureDetector(onTap: () => setState(() => filter = f), child: Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: f == filter? Colors.amber : Colors.black54, borderRadius: BorderRadius.circular(15)), child: Text(f, style: TextStyle(color: f == filter? Colors.black : Colors.white, fontSize: 11))))).toList())),
-        Positioned(bottom: 150, left: 0, right: 0, child: Center(child: GestureDetector(onLongPress: () => setState(() => showDial = true), onTap: () => setState(() => showDial =!showDial), child: Container(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7), decoration: BoxDecoration(color: showDial? Colors.amber : Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text("${zoom.toStringAsFixed(1)}x", style: TextStyle(color: showDial? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 13)))))),
-        if (showDial) Positioned(bottom: 90, left: 60, right: 60, height: 50, child: GestureDetector(onHorizontalDragUpdate: (d) { setZ(zoom - (d.primaryDelta??0) * 0.06); }, child: Container(decoration: BoxDecoration(color: Colors.black.withOpacity(0.8), borderRadius: BorderRadius.circular(25)), child: CustomPaint(painter: SmallDialPainter(zoom))))),
-        Positioned(bottom: 12, left: 20, right: 20, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          GestureDetector(onTap: toggleFlash, child: Container(width: 50, height: 50, decoration: BoxDecoration(color: flash == FlashMode.torch? Colors.amber : Colors.white24, shape: BoxShape.circle), child: Icon(flash == FlashMode.torch? Icons.flash_on : Icons.flash_off, color: flash == FlashMode.torch? Colors.black : Colors.white))),
-          GestureDetector(onTap: shoot, child: Container(width: 78, height: 78, decoration: BoxDecoration(color: rec? Colors.red : Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)), child: Icon(rec? Icons.stop : Icons.circle, color: rec? Colors.white : Colors.red, size: rec? 36 : 74))),
-          GestureDetector(onTap: switchCam, child: Container(width: 50, height: 50, decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle), child: const Icon(Icons.cameraswitch, color: Colors.white)))
-        ]))
-      ]),
+class KillerApp extends StatelessWidget {
+  const KillerApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: KillerCamScreen(),
     );
   }
 }
 
-class SmallDialPainter extends CustomPainter {
-  final double cur; SmallDialPainter(this.cur);
-  @override void paint(Canvas c, Size s) {
-    double cx = s.width / 2;
-    c.drawLine(Offset(cx, 10), Offset(cx, 20), Paint()..color = Colors.amber..strokeWidth = 2.5);
-    List<double> zs = [0.6, 1.0, 2.0, 3.0, 4.0, 6.0, 10.0];
-    for (double z in zs) {
-      double curT = (cur - 0.6) / 9.4; double t = (z - 0.6) / 9.4;
-      double x = cx + (t - curT) * s.width * 0.8;
-      if (x < 10 || x > s.width - 10) continue;
-      bool isCur = (cur - z).abs() < 0.2;
-      c.drawLine(Offset(x, s.height/2 - (isCur?7:4)), Offset(x, s.height/2 + (isCur?7:4)), Paint()..color = isCur? Colors.amber : Colors.white70..strokeWidth = isCur?2.5:1);
-      TextPainter tp = TextPainter(text: TextSpan(text: "${z==0.6?0.6:z.toInt()}x", style: TextStyle(color: isCur? Colors.amber : Colors.white70, fontSize: isCur?10:8, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr); tp.layout(); tp.paint(c, Offset(x - tp.width/2, s.height/2 + 8));
+class KillerCamScreen extends StatefulWidget {
+  @override
+  State<KillerCamScreen> createState() => _KillerCamScreenState();
+}
+
+class _KillerCamScreenState extends State<KillerCamScreen> {
+  CameraController? _controller;
+  bool _isRecording = false;
+  bool _isPhotoMode = true;
+  int _recordSeconds = 0;
+  Timer? _timer;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  String _selectedMode = "Photo"; // Ultra HD, Video, Photo, Portrait, Cinematic
+  String _selectedFilter = "Original";
+
+  @override
+  void initState() {
+    super.initState();
+    initCamera();
+  }
+
+  Future<void> initCamera() async {
+    _controller = CameraController(cameras[0], ResolutionPreset.ultraHigh,
+        enableAudio: true, imageFormatGroup: ImageFormatGroup.yuv420);
+    await _controller!.initialize();
+    // BRIGHTNESS FIX - Photo mode la suruvatila auto exposure
+    await _controller!.setExposureMode(ExposureMode.auto);
+    await _controller!.setFocusMode(FocusMode.auto);
+    await _controller!.setExposureOffset(0.0);
+    if (mounted) setState(() {});
+  }
+
+  // PHOTO CLICK - SOUND FIX
+  Future<void> takePhoto() async {
+    try {
+      // Sound
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.play(AssetSource('sounds/click.mp3')).catchError((_) async {
+        // jar file nasel tar system sound
+        await _audioPlayer.play(UrlSource('https://cdn.pixabay.com/audio/2022/03/24/audio_1a2a2b2c2d.mp3')).catchError((e){});
+      });
+
+      final file = await _controller!.takePicture();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚡ KATAK! Photo Saved'), duration: Duration(milliseconds: 800)),
+      );
+    } catch (e) {
+      print(e);
     }
   }
-  @override bool shouldRepaint(covariant SmallDialPainter o) => o.cur!= cur;
-}
+
+  // VIDEO START - BRIGHTNESS + SOUND + TIMING FIX
+  Future<void> startVideo() async {
+    try {
+      // BRIGHTNESS FIX - Video chalu kartana exposure reset
+      await _controller!.setExposureMode(ExposureMode.auto);
+      await _controller!.setExposureOffset(0.0);
+      await _controller!.setFocusMode(FocusMode.auto);
+
+      // SOUND FIX
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.play(AssetSource('sounds/start.mp3')).catchError((_) {});
+
+      await _controller!.startVideoRecording();
+      setState(() {
+        _isRecording = true;
+        _recordSeconds = 0;
+      });
+
+      // TIMING FIX - Timer chalu
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            _recordSeconds++;
+          });
+        }
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> stopVideo() async {
+    try {
+      _timer?.cancel();
+      final file = await _controller!.stopVideoRecording();
+
+      // BRIGHTNESS FIX - Band kelyavar parat auto
+      await _controller!.setExposureMode(ExposureMode.auto);
+      await _controller!.setExposureOffset(0.0);
+
+      setState(() {
+        _isRecording = false;
+        _recordSeconds = 0;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video Saved')),
+      );
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  String get timerText {
+    int m = _recordSeconds ~/ 60;
+    int s = _recordSeconds % 60;
+    return "${m.toString().padLeft(2,'0')}:${s.toString().padLeft(2,'0')}";
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller?.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_controller == null ||!_controller!.value.isInitialized) {
+      return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.yellow)));
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // CAMERA
+          SizedBox.expand(child: CameraPreview(_controller!)),
+
+          // TOP BAR
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                // KILLER CAM + TIMER
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("KILLER CAM • 1.0x", style: TextStyle(fontWeight: FontWeight.bold)),
+                        if (_isRecording)...[
+                          const SizedBox(width: 10),
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                          const SizedBox(width: 5),
+                          Text(timerText, style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Modes
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ["Ultra HD", "Video", "Photo", "Portrait", "Cinematic"].map((mode) {
+                      bool selected = _selectedMode == mode;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedMode = mode),
+                        child: Container(
+                          margin: EdgeInsets.only(left: 8),
+                          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: selected? Colors.white : Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(mode, style: TextStyle(color: selected? Colors.black : Colors.white, fontSize: 12)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Filters
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ["Original", "KGF", "RRR", "Vivid", "B&W"].map((f) {
+                      bool sel = _selectedFilter == f;
+                      return Container(
+                        margin: EdgeInsets.only(left: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: sel? Colors.amber : Colors.black54,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Text(f, style: TextStyle(color: sel? Colors.black : Colors.white, fontSize: 11)),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // BOTTOM
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 30, left: 20, right: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CircleAvatar(backgroundColor: Colors.black54, child: Icon(Icons.flash_off, color: Colors.white)),
+                  // SHUTTER BUTTON
+                  GestureDetector(
+                    onTap: () {
+                      if (_selectedMode == "Photo") {
+                        takePhoto();
+                      } else {
+                        if (_isRecording) stopVideo(); else startVideo();
+                      }
+                    },
+                    child: Container(
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        color: _isRecording? Colors.red : Colors.white,
+                      ),
+                      child: Icon(_isRecording? Icons.stop : Icons.circle, color: _isRecording? Colors.white : Colors.red, size: 50),
+                    ),
+                  ),
+                  CircleAvatar(backgroundColor: Colors.black54, child: Icon(Icons.cameraswitch, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+          // Zoom text
+          Positioned(
+            bottom: 120,
+            left: 0,
+            right: 0,
+            child: Center(child: Text("1.0x", style: TextStyle(color: Colors.white))),
+          )
+        ],
+      ),
+    );
+  }
+}1
