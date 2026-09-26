@@ -49,29 +49,29 @@ class _KillerTopState extends State<KillerTop> {
     ctrl?.setZoomLevel(zoom);
   }
 
-  // SOUND + VIBRATION LOGIC
+  // === SOUND LOGIC ===
   Future<void> shoot() async {
+    // Haptic + System Click Sound
+    HapticFeedback.mediumImpact();
+    SystemSound.play(SystemSoundType.click);
+
     if (mode == "Video") {
       if (rec) {
-        HapticFeedback.heavyImpact();
-        SystemSound.play(SystemSoundType.click);
-        Feedback.forLongPress(context);
         var f = await ctrl!.stopVideoRecording();
         setState(() => rec = false);
         await Gal.putVideo(f.path);
       } else {
-        HapticFeedback.mediumImpact();
-        SystemSound.play(SystemSoundType.click);
-        Feedback.forTap(context);
         await ctrl!.startVideoRecording();
         setState(() => rec = true);
       }
     } else {
-      HapticFeedback.mediumImpact();
-      SystemSound.play(SystemSoundType.click);
       var f = await ctrl!.takePicture();
       await Gal.putImage(f.path);
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("📸 KILLER CLICK!"), duration: Duration(milliseconds: 400)));
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("📸 KATAK! Photo Saved"), duration: Duration(milliseconds: 600))
+        );
+      }
     }
   }
 
