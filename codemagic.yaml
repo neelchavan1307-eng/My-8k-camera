@@ -12,6 +12,7 @@ workflows:
           flutter create . --platforms=android --project-name my_8k_camera --org com.killer.camera
           flutter pub get
       - name: Build APK
-        script: flutter build apk --release --no-tree-shake-icons
+        script: |
+          flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
