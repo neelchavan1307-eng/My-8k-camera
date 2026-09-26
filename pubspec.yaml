@@ -1,18 +1,15 @@
-workflows:
-  android-workflow:
-    name: Killer Camera Final
-    instance_type: mac_mini_m2
-    environment:
-      flutter: 3.27.4
-      java: 17
-    scripts:
-      - name: Fix Gradle
-        script: |
-          rm -rf android
-          flutter create . --platforms=android --project-name my_8k_camera --org com.killer.camera
-          flutter pub get
-      - name: Build APK
-        script: |
-          flutter build apk --release --no-tree-shake-icons
-    artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+name: my_8k_camera
+description: Killer Camera Top
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  camera: ^0.11.0
+  permission_handler: ^11.3.1
+  gal: ^2.3.1
+flutter:
+  uses-material-design: true
