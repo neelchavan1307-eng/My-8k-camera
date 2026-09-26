@@ -37,6 +37,7 @@ class _KillerTopState extends State<KillerTop> {
     await [Permission.camera, Permission.microphone].request();
     if (ctrl!= null) {
       await ctrl!.dispose();
+      ctrl = null;
     }
     ctrl = CameraController(cam, ResolutionPreset.high, enableAudio: true);
     await ctrl!.initialize();
@@ -172,6 +173,7 @@ class _KillerTopState extends State<KillerTop> {
               }).toList(),
             ),
           ),
+          // 1x fakt - text hide
           Positioned(
             bottom: 175, left: 0, right: 0,
             child: Center(
@@ -186,9 +188,10 @@ class _KillerTopState extends State<KillerTop> {
               ),
             ),
           ),
+          // CHOTI DIAL
           if (showDial)
             Positioned(
-              bottom: 70, left: 0, right: 0, height: 150,
+              bottom: 85, left: 15, right: 15, height: 90,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragUpdate: (details) {
@@ -196,7 +199,11 @@ class _KillerTopState extends State<KillerTop> {
                   double newZoom = zoom - delta * 0.07;
                   setZ(newZoom);
                 },
-                child: CustomPaint(painter: DialPainter(zoom)),
+                onTap: () => setState(() => showDial = false),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(45),
+                  child: CustomPaint(painter: DialPainter(zoom)),
+                ),
               ),
             ),
           Positioned(
@@ -230,27 +237,41 @@ class DialPainter extends CustomPainter {
   DialPainter(this.cur);
   @override void paint(Canvas c, Size s) {
     double cx = s.width / 2;
-    double cy = s.height + 35;
-    double r = s.width * 0.80;
-    c.drawPath(Path()..addArc(Rect.fromCircle(center: Offset(cx, cy), radius: r + 45), pi, pi), Paint()..color = Colors.black.withOpacity(0.65)..style = PaintingStyle.fill);
-    for (double z = 0.6; z <= 10.0; z += 0.1) {
+    double cy = s.height + 250;
+    double r = s.width * 1.3;
+
+    c.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, s.width, s.height), const Radius.circular(45)),
+      Paint()..color = Colors.black.withOpacity(0.78),
+    );
+
+    for (double z = 0.6; z <= 10.0; z += 0.2) {
       double t = (z - 0.6) / 9.4;
       double ang = pi + t * pi;
-      bool isMain = [0.6, 1.0, 2.0, 4.0, 10.0].any((v) => (v - z).abs() < 0.07);
-      double len = isMain? 24 : (z * 10) % 5 == 0? 14 : 6;
+      bool isMain = [0.6, 1.0, 2.0, 4.0, 10.0].any((v) => (v - z).abs() < 0.15);
+      if (!isMain && z!= 0.6) {
+        if ((z * 10) % 20!= 0) continue;
+      }
+
+      double len = isMain? 18 : 8;
       double x1 = cx + r * cos(ang);
       double y1 = cy + r * sin(ang);
       double x2 = cx + (r - len) * cos(ang);
       double y2 = cy + (r - len) * sin(ang);
-      bool isCur = (cur - z).abs() < 0.15;
-      c.drawLine(Offset(x1, y1), Offset(x2, y2), Paint()..color = isCur? Colors.amber : (isMain? Colors.white : Colors.white38)..strokeWidth = isCur? 4.5 : isMain? 2.8 : 1.2..strokeCap = StrokeCap.round);
+      bool isCur = (cur - z).abs() < 0.18;
+
+      c.drawLine(Offset(x1, y1), Offset(x2, y2),
+          Paint()..color = isCur? Colors.amber : (isMain? Colors.white : Colors.white30)..strokeWidth = isCur? 3.5 : isMain? 2.2 : 1.0..strokeCap = StrokeCap.round);
+
       if (isMain) {
-        TextPainter tp = TextPainter(text: TextSpan(text: "${z.toStringAsFixed(z == 0.6? 1 : 0)}x", style: TextStyle(color: isCur? Colors.amber : Colors.white, fontSize: isCur? 16 : 12, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr);
+        TextPainter tp = TextPainter(
+            text: TextSpan(text: "${z.toStringAsFixed(z == 0.6? 1 : 0)}x", style: TextStyle(color: isCur? Colors.amber : Colors.white, fontSize: isCur? 13 : 10, fontWeight: FontWeight.bold)),
+            textDirection: TextDirection.ltr);
         tp.layout();
-        tp.paint(c, Offset(cx + (r - 42) * cos(ang) - tp.width / 2, cy + (r - 42) * sin(ang) - 7));
+        tp.paint(c, Offset(cx + (r - 32) * cos(ang) - tp.width / 2, cy + (r - 32) * sin(ang) - 6));
       }
     }
-    c.drawLine(Offset(cx, cy - r + 10), Offset(cx, cy - r + 35), Paint()..color = Colors.amber..strokeWidth = 4..strokeCap = StrokeCap.round);
+    c.drawLine(Offset(cx, 12), Offset(cx, 28), Paint()..color = Colors.amber..strokeWidth = 3..strokeCap = StrokeCap.round);
   }
   @override bool shouldRepaint(covariant DialPainter o) => o.cur!= cur;
 }
