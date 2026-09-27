@@ -1,111 +1,121 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:gal/gal.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 List<CameraDescription> cameras = [];
-
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  runApp(KillerCamApp());
+  runApp(MaterialApp(debugShowCheckedModeBanner: false, home: KillerCam()));
 }
 
-class KillerCamApp extends StatelessWidget {
+class KillerCam extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: CameraPage());
-  }
+  State<KillerCam> createState() => _KillerCamState();
 }
 
-class CameraPage extends StatefulWidget {
-  @override
-  _CameraPageState createState() => _CameraPageState();
-}
-
-class _CameraPageState extends State<CameraPage> {
-  CameraController? controller;
-  int selectedFilter = 0;
-  bool isRecording = false;
-  double beauty = 8;
-  String quality = "4K";
-
-  List<String> filters = ["Original", "RRR", "KGF", "Cinematic", "DSLR"];
-  List<ColorFilter> filterColors = [
-    ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-    ColorFilter.mode(Colors.orange.withOpacity(0.3), BlendMode.color),
-    ColorFilter.mode(Colors.amber.withOpacity(0.4), BlendMode.saturation),
-    ColorFilter.mode(Colors.brown.withOpacity(0.3), BlendMode.color),
-    ColorFilter.mode(Colors.white.withOpacity(0.15), BlendMode.softLight),
-  ];
+class _KillerCamState extends State<KillerCam> {
+  CameraController? ctrl;
+  bool isPhoto = true;
+  bool isRec = false;
+  double zoom = 1.0;
+  int filter = 0;
+  List<String> names = ["Original", "RRR", "KGF", "Cinematic", "DSLR"];
+  List<Color> fColor = [Colors.transparent, Colors.orange, Colors.amber, Colors.brown, Colors.white];
 
   @override
-  void initState() {
-    super.initState();
-    initCamera();
+  void initState() { super.initState(); initCam(); }
+
+  initCam() async {
+    await [Permission.camera, Permission.microphone, Permission.photos, Permission.videos, Permission.storage].request();
+    ctrl = CameraController(cameras[0], ResolutionPreset.max, enableAudio: true);
+    await ctrl!.initialize();
+    setState(() {});
   }
 
-  initCamera() async {
-    controller = CameraController(cameras[0], ResolutionPreset.ultraHigh, enableAudio: true);
-    await controller!.initialize();
-    if (mounted) setState(() {});
-  }
-
-  takePhoto() async {
-    if (controller == null ||!controller!.value.isInitialized) return;
-    try {
-      XFile file = await controller!.takePicture();
-      // FIX: Direct Gallery Save
-      await Gal.putImage(file.path, album: "KillerCam");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ Photo Saved to Gallery - KillerCam! 🔥")));
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  recordVideo() async {
-    if (isRecording) {
-      XFile file = await controller!.stopVideoRecording();
-      setState(() => isRecording = false);
-      await Gal.putVideo(file.path, album: "KillerCam");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("🎥 Video Saved to Gallery!")));
+  capture() async {
+    if (ctrl == null) return;
+    if (isPhoto) {
+      XFile f = await ctrl!.takePicture();
+      await Gal.putImage(f.path, album: "KillerCam");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ PHOTO SAVE!")));
     } else {
-      await controller!.startVideoRecording();
-      setState(() => isRecording = true);
+      if (isRec) {
+        XFile f = await ctrl!.stopVideoRecording();
+        setState(() => isRec = false);
+        await Gal.putVideo(f.path, album: "KillerCam");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("🎥 VIDEO SAVE!")));
+      } else {
+        await ctrl!.startVideoRecording();
+        setState(() => isRec = true);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (controller == null ||!controller!.value.isInitialized) {
-      return Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator()));
-    }
+    if (ctrl == null ||!ctrl!.value.isInitialized) return Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.yellow)));
+
+    final size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          ColorFiltered(
-            colorFilter: filterColors[selectedFilter],
-            child: CameraPreview(controller!),
+          // 1. FULL SCREEN CAMERA - YA MULE KALI PATTI JANAR
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(width: size.width, height: size.height / ctrl!.value.aspectRatio, child: CameraPreview(ctrl!)),
           ),
-          // Top Bar
-          Positioned(top: 40, left: 20, right: 20, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text("KILLER • $quality • 1.0x", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            Icon(Icons.flash_on, color: Colors.white),
-          ])),
-          // Filters
-          Positioned(bottom: 180, left: 0, right: 0, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(filters.length, (i) => GestureDetector(onTap: () => setState(() => selectedFilter = i), child: Container(margin: EdgeInsets.symmetric(horizontal: 8), padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8), decoration: BoxDecoration(color: selectedFilter==i? Colors.white : Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text(filters[i], style: TextStyle(color: selectedFilter==i? Colors.black : Colors.white, fontWeight: FontWeight.bold)))))))),
-          // Beauty Slider
-          Positioned(right: 10, top: 200, bottom: 200, child: RotatedBox(quarterTurns: 3, child: Slider(value: beauty, min: 0, max: 100, activeColor: Colors.yellow, onChanged: (v) => setState(() => beauty = v)))),
-          // Bottom Controls
-          Positioned(bottom: 20, left: 20, right: 20, child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            GestureDetector(onTap: () => Gal.open(), child: Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.photo, color: Colors.black))),
-            GestureDetector(onTap: takePhoto, onLongPress: recordVideo, child: Container(width: 80, height: 80, decoration: BoxDecoration(color: isRecording? Colors.red : Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.black, width: 4)))),
-            IconButton(icon: Icon(Icons.cameraswitch, color: Colors.white, size: 35), onPressed: () {}),
-          ])),
+
+          if (filter!= 0) Container(color: fColor[filter].withOpacity(0.25)),
+
+          // TOP BAR
+          Positioned(top: 0, left: 0, right: 0, child: SafeArea(child: Column(
+            children: [
+              Padding(padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Container(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)), child: Text("KILLER • 4K • ${zoom.toStringAsFixed(1)}x", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))),
+                Icon(Icons.flash_on, color: Colors.white),
+              ])),
+              SizedBox(height: 10),
+              // YA MULE VARACHE OPTION DISATIL
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                modeBtn("SLO-MO"), modeBtn("PHOTO"), modeBtn("VIDEO"),
+              ]),
+            ],
+          ))),
+
+          // BEAUTY SLIDER
+          Positioned(right: 5, top: size.height*0.25, bottom: size.height*0.25, child: RotatedBox(quarterTurns: 3, child: Slider(value: zoom, min: 1.0, max: 8.0, activeColor: Colors.yellow, onChanged: (v) async { setState(()=>zoom=v); await ctrl!.setZoomLevel(v); }))),
+
+          // FILTERS + BOTTOM
+          Positioned(bottom: 0, left: 0, right: 0, child: SafeArea(child: Column(
+            children: [
+              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(names.length, (i) => GestureDetector(onTap: ()=> setState(()=>filter=i), child: Container(margin: EdgeInsets.only(left: i==0?15:8, bottom: 15), padding: EdgeInsets.symmetric(horizontal: 16, vertical: 7), decoration: BoxDecoration(color: filter==i? Colors.white : Colors.black54, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white30)), child: Text(names[i], style: TextStyle(color: filter==i? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 13))))))),
+              Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 10), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                GestureDetector(onTap: () async { await Gal.open(); }, child: Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), child: Icon(Icons.photo_library, color: Colors.white))),
+                GestureDetector(onTap: capture, child: Container(width: 75, height: 75, decoration: BoxDecoration(color: isRec? Colors.red : Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)), child: Icon(isPhoto? Icons.camera_alt : (isRec? Icons.stop : Icons.videocam), size: 32, color: isRec? Colors.white : Colors.black))),
+                IconButton(icon: Icon(Icons.cameraswitch, color: Colors.white, size: 30), onPressed: () async {
+                  int idx = ctrl!.description == cameras[0]? 1 : 0;
+                  if(idx >= cameras.length) idx=0;
+                  await ctrl!.dispose();
+                  ctrl = CameraController(cameras[idx], ResolutionPreset.max, enableAudio: true);
+                  await ctrl!.initialize();
+                  setState(() {});
+                }),
+              ])),
+            ],
+          ))),
         ],
       ),
     );
+  }
+
+  Widget modeBtn(String t){
+    bool sel = (t=="PHOTO" && isPhoto) || (t=="VIDEO" &&!isPhoto);
+    if(t=="SLO-MO") sel = false;
+    return GestureDetector(onTap: (){ setState(()=> isPhoto = (t=="PHOTO")); }, child: Container(margin: EdgeInsets.symmetric(horizontal: 6), padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: sel? Colors.yellow : Colors.black45, borderRadius: BorderRadius.circular(15)), child: Text(t, style: TextStyle(color: sel? Colors.black : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold))));
   }
 }
