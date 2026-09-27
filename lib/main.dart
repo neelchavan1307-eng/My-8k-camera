@@ -88,4 +88,4 @@ class _KillerCamState extends State<KillerCam> {
     ]));
   }
   Widget _ic(IconData i, VoidCallback f, {double size=20}){ return InkWell(onTap:f, child: Container(padding: EdgeInsets.all(9), decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: Icon(i, color: Colors.white, size: size))); }
-}2
+}
