@@ -43,7 +43,6 @@ class _KillerCamState extends State<KillerCam> {
     setState(() {});
   }
 
-  // DSLR SETTING - f/1.8 + 2x Zoom
   setDSLR(bool enable) async {
     if (enable) {
       setState(() { zoom = 2.0; blurPower = 20; filter = 4; });
@@ -54,7 +53,6 @@ class _KillerCamState extends State<KillerCam> {
     }
   }
 
-  // AI ULTRA CLEAR - ZOOM PHOTO CLEAR KARNE
   Future<void> makeUltraClear(String originalPath) async {
     try {
       setState(() => isProcessing = true);
@@ -62,7 +60,6 @@ class _KillerCamState extends State<KillerCam> {
       img.Image? original = img.decodeImage(bytes);
       if (original == null) return;
 
-      // 2X Upscale - AI Sarkha
       img.Image upscaled = img.copyResize(
         original,
         width: original.width * 2,
@@ -70,7 +67,6 @@ class _KillerCamState extends State<KillerCam> {
         interpolation: img.Interpolation.cubic,
       );
 
-      // Sharpen - Ultra Clear
       img.Image sharpened = img.convolution(
         upscaled,
         filter: [0, -1, 0, -1, 5, -1, 0, -1, 0],
@@ -85,7 +81,7 @@ class _KillerCamState extends State<KillerCam> {
       setState(() => isProcessing = false);
 
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("🔥 AI ULTRA CLEAR SAVE ZHALA! Gallery > KillerCam Ultra"), backgroundColor: Colors.green)
+        SnackBar(content: Text("🔥 AI ULTRA CLEAR SAVE! Gallery > KillerCam Ultra"), backgroundColor: Colors.green)
       );
     } catch (e) {
       setState(() => isProcessing = false);
@@ -97,14 +93,8 @@ class _KillerCamState extends State<KillerCam> {
     if (isPhoto) {
       XFile f = await ctrl!.takePicture();
       await Gal.putImage(f.path, album: "KillerCam");
-
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("📸 Original Save! AI Clear hotay..."))
-      );
-
-      // AI Clear banav
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("📸 Original Save! AI Clear hotay...")));
       await makeUltraClear(f.path);
-
     } else {
       if (isRec) {
         XFile f = await ctrl!.stopVideoRecording();
@@ -132,7 +122,6 @@ class _KillerCamState extends State<KillerCam> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // FULL SCREEN CAMERA - kali patti 100% janar
           FittedBox(
             fit: BoxFit.cover,
             child: SizedBox(
@@ -144,7 +133,6 @@ class _KillerCamState extends State<KillerCam> {
 
           if (filter!= 0) Container(color: fColor[filter].withOpacity(filter == 4? 0.12 : 0.22)),
 
-          // TOP BAR
           Positioned(
             top: 0, left: 0, right: 0,
             child: SafeArea(
@@ -158,7 +146,8 @@ class _KillerCamState extends State<KillerCam> {
                         decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
                         child: Text("KILLER • 4K • ${zoom.toStringAsFixed(1)}x • f/1.8", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                       ),
-                      if(isProcessing) Row(children: [SizedBox(width:15, height:15, child: CircularProgressIndicator(strokeWidth:2, color: Colors.yellow)), SizedBox(width:5), Text("AI...", style: TextStyle(color: Colors.yellow, fontSize: 10))]) else Icon(Icons.bokeh, color: filter == 4? Colors.yellow : Colors.white),
+                      // FIX: Icons.bokeh -> Icons.blur_on
+                      if(isProcessing) Row(children: [SizedBox(width:15, height:15, child: CircularProgressIndicator(strokeWidth:2, color: Colors.yellow)), SizedBox(width:5), Text("AI...", style: TextStyle(color: Colors.yellow, fontSize: 10))]) else Icon(Icons.blur_on, color: filter == 4? Colors.yellow : Colors.white),
                     ]),
                   ),
                   SizedBox(height: 8),
@@ -170,7 +159,6 @@ class _KillerCamState extends State<KillerCam> {
             ),
           ),
 
-          // RIGHT ZOOM SLIDER
           Positioned(
             right: 0, top: size.height * 0.25, bottom: size.height * 0.25,
             child: RotatedBox(
@@ -183,7 +171,6 @@ class _KillerCamState extends State<KillerCam> {
             ),
           ),
 
-          // BOTTOM
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: SafeArea(
