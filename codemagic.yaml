@@ -1,18 +1,23 @@
 workflows:
   android-workflow:
-    name: Killer Camera Final
+    name: Killer Cam Build
+    max_build_duration: 20
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.27.4
-      java: 17
+      flutter: stable
+      xcode: latest
+      cocoapods: default
     scripts:
-      - name: Fix Gradle
-        script: |
-          rm -rf android
-          flutter create . --platforms=android --project-name my_8k_camera --org com.killer.camera
+      - name: Get packages
+        script: | 
           flutter pub get
       - name: Build APK
-        script: |
-          flutter build apk --release --no-tree-shake-icons
+        script: | 
+          flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
+    publishing:
+      email:
+        recipients:
+          - neelchavan@example.com
