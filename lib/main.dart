@@ -1,4 +1,4 @@
-1import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
